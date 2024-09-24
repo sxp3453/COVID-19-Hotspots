@@ -1,0 +1,552 @@
+
+R version 4.3.1 (2023-06-16) -- "Beagle Scouts"
+Copyright (C) 2023 The R Foundation for Statistical Computing
+Platform: aarch64-apple-darwin20 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+[R.app GUI 1.79 (8238) aarch64-apple-darwin20]
+
+[Workspace restored from /Users/sushmitapersaud/.RData]
+[History restored from /Users/sushmitapersaud/.Rapp.history]
+
+> library(e1071)
+> data <- read.csv("/Users/sushmitapersaud/Downloads/Florida_Cases_Zips_0 2.csv")
+> str(data)
+'data.frame':	1102 obs. of  15 variables:
+ $ OBJECTID     : int  1 2 3 4 5 6 7 8 9 10 ...
+ $ ZIP.Code     : int  41 42 45 53 87 97 98 32003 32008 32008 ...
+ $ OBJECTID_1   : int  44 49 55 58 60 64 66 67 71 72 ...
+ $ DEPCODE      : int  6 5 42 50 31 44 44 10 15 21 ...
+ $ COUNTYNAME   : chr  "Broward" "Brevard" "Marion" "Palm Beach" ...
+ $ FieldMatch   : chr  "Broward-00041" "Brevard-00042" "Marion-00045" "Palm Beach-00053" ...
+ $ POName       : chr  "NONE" "NONE" "NONE" "NONE" ...
+ $ Places       : chr  "Area is in the South Florida Water Conservation Area 3A" "Area is part of a federally protected nature area" "Area is part of the Wakulla National Forest " "Area is part of the Loxahatchee National Wildlife Refuge" ...
+ $ OBJECTID_1.1 : int  NA NA NA NA NA NA NA 171 295 375 ...
+ $ ZIPX         : chr  "" "" "" "" ...
+ $ c_places     : chr  "" "" "" "" ...
+ $ Cases_1      : chr  "0" "0" "0" "0" ...
+ $ LabelY       : int  0 0 0 0 0 0 0 118 0 0 ...
+ $ Shape__Area  : num  0.1866 0.0412 0.0252 0.1656 0.0232 ...
+ $ Shape__Length: num  1.922 1.655 0.714 2.551 0.823 ...
+> train_index <- sample(1:nrow(data), nrow(data)*0.7)
+> train_set <- data[train_index, ]
+> test_set <- data[-train_index, ]
+> 
+> data_combined <- rbind(train_set, test_set)
+> data_combined$COUNTYNAME <- as.factor(data_combined$COUNTYNAME)
+> data_combined$FieldMatch <- as.factor(data_combined$FieldMatch)
+> data_combined$POName <- as.factor(data_combined$POName)
+> data_combined$Places <- as.factor(data_combined$Places)
+> data_combined$ZIPX <- as.factor(data_combined$ZIPX)
+> data_combined$c_places <- as.factor(data_combined$c_places)
+> set.seed(1)
+> train_index <- sample(1:nrow(data_combined), nrow(data_combined)*0.7)
+> train_set <- data_combined[train_index, ]
+> test_set <- data_combined[-train_index, ]
+> class(train_set$Cases_1)
+[1] "character"
+> train_set$Cases_1 <- as.numeric(as.character(train_set$Cases_1))
+Warning message:
+NAs introduced by coercion 
+> train_set <- na.omit(train_set)
+> train_set$Cases_1[is.na(train_set$Cases_1)] <- median(train_set$Cases_1, na.rm = TRUE)
+> svm_model <- svm(Cases_1 ~ ., data = train_set)
+> summary (svm_model) 
+
+Call:
+svm(formula = Cases_1 ~ ., data = train_set)
+
+
+Parameters:
+   SVM-Type:  eps-regression 
+ SVM-Kernel:  radial 
+       cost:  1 
+      gamma:  0.0002386635 
+    epsilon:  0.1 
+
+
+Number of Support Vectors:  618
+
+
+
+
+
+> svm_model <- svm(COUNTYNAME ~ Cases_1, data = train_set)
+> predictions <- predict(svm_model, newdata = test_set)
+Error in predict.svm(svm_model, newdata = test_set) : 
+  test data does not match model !
+> print(colnames(test_set))
+ [1] "OBJECTID"      "ZIP.Code"      "OBJECTID_1"    "DEPCODE"       "COUNTYNAME"    "FieldMatch"    "POName"        "Places"        "OBJECTID_1.1"  "ZIPX"          "c_places"      "Cases_1"       "LabelY"       
+[14] "Shape__Area"   "Shape__Length"
+> print(class(train_set$Cases_1))
+[1] "numeric"
+> print(class(test_set$Cases_1))
+[1] "character"
+> test_set$Cases_1 <- as.numeric(as.character(test_set$Cases_1))
+Warning message:
+NAs introduced by coercion 
+> test_set <- na.omit(test_set)
+> test_set$Cases_1[is.na(test_set$Cases_1)] <- median(test_set$Cases_1, na.rm = TRUE)
+> predictions <- predict(svm_model, newdata = test_set)
+> print(predictions)
+         349          401          382         1018          796          657          494          966         1024          189          274          260         1090          487          629          763 
+        Lake         Lake         Lake     Pinellas Hillsborough     Pinellas         Lake         Lake     Pinellas Hillsborough         Lake Hillsborough Hillsborough         Dade Hillsborough Hillsborough 
+         586          775          666           57          930           90           54          991          346          914         1013          601          262          120          486          698 
+Hillsborough Hillsborough Hillsborough         Lake         Dade         Lake     Pinellas         Lake         Lake         Lake     Pinellas Hillsborough     Pinellas         Dade         Dade     Sarasota 
+         252          664           68          578          472          608         1001          219          467          357          383          123          705          181         1045           73 
+        Lake     Sarasota         Lake         Dade         Dade Hillsborough         Lake         Lake     Pinellas Hillsborough     Pinellas Hillsborough         Dade Hillsborough         Dade         Lake 
+         340         1004           67          285          345          873          811          885         1065          130          198          435         1049           19          867          335 
+        Lake         Lake         Lake         Lake         Lake         Lake         Lake         Lake         Lake         Lake         Lake         Dade     Pinellas         Lake         Lake         Lake 
+         537          613          667          483          599           27          920          451          788          866         1007          777          939         1088          116          398 
+        Dade         Dade     Pinellas         Dade Hillsborough         Lake         Dade     Pinellas Hillsborough Hillsborough         Lake     Pinellas     Pinellas         Lake         Lake         Dade 
+         144          973          830          780          765          692          829          896          563          344           60          173          266         1079          222          374 
+        Dade         Lake Hillsborough Hillsborough         Dade     Pinellas         Dade     Pinellas         Dade         Lake         Lake         Lake         Lake         Lake         Lake         Dade 
+         462         1043          444          258          585          898          217         1008          207          411          570          441          651          995         1035           58 
+Hillsborough         Lake Hillsborough Hillsborough         Lake Hillsborough     Pinellas     Pinellas         Lake         Dade     Pinellas         Lake         Dade         Lake         Lake     Pinellas 
+         921          726           38          986           80           65          525          464          117          573          133          635          634          630          903          631 
+        Dade         Dade         Lake         Lake         Lake         Lake     Pinellas         Lake     Pinellas Hillsborough     Pinellas         Lake Hillsborough         Dade Hillsborough     Pinellas 
+         864          719           40          899          980          669           99          755          703          637         1075          588          100          928          736          129 
+    Sarasota         Dade         Lake Hillsborough         Lake     Pinellas     Pinellas     Pinellas     Pinellas         Dade         Dade         Dade     Pinellas         Lake Hillsborough     Pinellas 
+         696          781          509          713          140          983          905          650          417          314          227          202          684          469          168          492 
+    Pinellas     Pinellas         Dade         Lake         Lake         Lake         Dade         Dade         Dade         Lake         Lake     Pinellas         Lake         Lake         Lake         Dade 
+         715          387          773          277          683          835           69          851           14          895          353          193          797            9          803         1021 
+    Pinellas         Lake         Lake     Pinellas     Sarasota         Lake     Pinellas         Lake         Lake Hillsborough         Lake         Lake         Lake         Lake         Lake     Pinellas 
+         610          341          471          770          394          550          121          108         1025          379          360          301          757          793          317          101 
+    Pinellas         Lake         Dade     Pinellas     Pinellas         Lake Hillsborough         Lake         Lake         Lake         Dade         Lake Hillsborough         Lake         Lake         Lake 
+         264          276          728          270          328          737          355          931           18          295         1010          592          855          515          913          582 
+        Lake         Lake         Dade         Lake         Lake         Dade         Dade     Pinellas     Pinellas     Pinellas         Lake Hillsborough     Pinellas         Lake         Dade Hillsborough 
+          92          625          632          924          434          407          607          324           74         1034          555          313          708          993          751          901 
+        Lake Hillsborough         Dade         Lake         Dade         Dade         Dade         Lake         Lake Hillsborough         Dade         Lake         Lake         Lake     Pinellas         Dade 
+         456          377           13           21           32           62           63           89          107          113          115          118          124          127          154          159 
+        Lake         Lake         Lake         Lake     Pinellas         Lake         Lake         Lake         Lake         Lake         Dade     Pinellas Hillsborough Hillsborough Hillsborough         Lake 
+         166          176          209          211          220          225          272          283          298          303          304          305          307          339          352          354 
+Hillsborough         Lake         Lake         Lake         Lake         Lake     Pinellas         Lake         Lake Hillsborough         Lake     Pinellas Hillsborough         Lake Hillsborough         Lake 
+         392          420          454          455          459          460          466          477          489          501          520          567          568          571          572          584 
+Hillsborough Hillsborough Hillsborough         Lake     Pinellas     Pinellas         Lake         Dade         Dade         Lake         Lake         Dade         Dade         Dade Hillsborough     Pinellas 
+         591          598          600          618          639          652          653          682          714          740          759          790          798          819          820          822 
+Hillsborough     Pinellas Hillsborough         Dade         Dade         Dade         Lake         Lake Hillsborough         Dade         Dade         Lake     Pinellas     Pinellas         Lake         Lake 
+         827          884          886          890          953          955          961          971          985          990         1009         1011         1028         1033         1056         1069 
+        Lake         Lake     Sarasota     Pinellas         Lake         Lake     Sarasota         Lake         Lake         Lake     Pinellas         Lake     Sarasota     Pinellas         Lake         Lake 
+        1081 
+        Lake 
+67 Levels: Alachua Baker Bay Bradford Brevard Broward Calhoun Charlotte Citrus Clay Collier Columbia Dade Desoto Dixie Duval Escambia Flagler Franklin Gadsden Gilchrist Glades Gulf Hamilton Hardee ... Washington
+> correlation <- cor(train_set$Cases_1, train_set$SomeNumericFeature)
+Error in cor(train_set$Cases_1, train_set$SomeNumericFeature) : 
+  supply both 'x' and 'y' or a matrix-like 'x'
+> svm_model <- svm(COUNTYNAME ~ ., data = train_set)
+> predictions <- predict(svm_model, newdata = test_set)
+> print(predictions)
+ 349  401  382 1018  796  657  494  966 1024  189  274  260 1090  487  629  763  586  775  666   57  930   90   54  991  346  914 1013  601  262  120  486  698  252  664   68  578  472  608 1001  219  467  357 
+Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade 
+ 383  123  705  181 1045   73  340 1004   67  285  345  873  811  885 1065  130  198  435 1049   19  867  335  537  613  667  483  599   27  920  451  788  866 1007  777  939 1088  116  398  144  973  830  780 
+Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade 
+ 765  692  829  896  563  344   60  173  266 1079  222  374  462 1043  444  258  585  898  217 1008  207  411  570  441  651  995 1035   58  921  726   38  986   80   65  525  464  117  573  133  635  634  630 
+Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade 
+ 903  631  864  719   40  899  980  669   99  755  703  637 1075  588  100  928  736  129  696  781  509  713  140  983  905  650  417  314  227  202  684  469  168  492  715  387  773  277  683  835   69  851 
+Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade 
+  14  895  353  193  797    9  803 1021  610  341  471  770  394  550  121  108 1025  379  360  301  757  793  317  101  264  276  728  270  328  737  355  931   18  295 1010  592  855  515  913  582   92  625 
+Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade 
+ 632  924  434  407  607  324   74 1034  555  313  708  993  751  901  456  377   13   21   32   62   63   89  107  113  115  118  124  127  154  159  166  176  209  211  220  225  272  283  298  303  304  305 
+Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade 
+ 307  339  352  354  392  420  454  455  459  460  466  477  489  501  520  567  568  571  572  584  591  598  600  618  639  652  653  682  714  740  759  790  798  819  820  822  827  884  886  890  953  955 
+Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade 
+ 961  971  985  990 1009 1011 1028 1033 1056 1069 1081 
+Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade Dade 
+67 Levels: Alachua Baker Bay Bradford Brevard Broward Calhoun Charlotte Citrus Clay Collier Columbia Dade Desoto Dixie Duval Escambia Flagler Franklin Gadsden Gilchrist Glades Gulf Hamilton Hardee ... Washington
+> library(mvtnorm)
+Error in library(mvtnorm) : there is no package called ‘mvtnorm’
+> install.packages(mvtnorm)
+Error: object 'mvtnorm' not found
+> install.packages("mvtnorm")
+--- Please select a CRAN mirror for use in this session ---
+trying URL 'https://cloud.r-project.org/bin/macosx/big-sur-arm64/contrib/4.3/mvtnorm_1.2-4.tgz'
+Content type 'application/x-gzip' length 799858 bytes (781 KB)
+==================================================
+downloaded 781 KB
+
+
+The downloaded binary packages are in
+	/var/folders/jl/kzj9mlrx3fz83wmz4qsd35gm0000gn/T//Rtmp54KDsX/downloaded_packages
+> library(mvtnorm)
+> model <- Mclust(data)
+Error in Mclust(data) : could not find function "Mclust"
+> install.packages("mclust")
+trying URL 'https://cloud.r-project.org/bin/macosx/big-sur-arm64/contrib/4.3/mclust_6.1.tgz'
+Content type 'application/x-gzip' length 4263516 bytes (4.1 MB)
+==================================================
+downloaded 4.1 MB
+
+
+The downloaded binary packages are in
+	/var/folders/jl/kzj9mlrx3fz83wmz4qsd35gm0000gn/T//Rtmp54KDsX/downloaded_packages
+> library(mclust)
+                   __           __ 
+   ____ ___  _____/ /_  _______/ /_
+  / __ `__ \/ ___/ / / / / ___/ __/
+ / / / / / / /__/ / /_/ (__  ) /_  
+/_/ /_/ /_/\___/_/\__,_/____/\__/   version 6.1
+Type 'citation("mclust")' for citing this R package in publications.
+
+Attaching package: ‘mclust’
+
+The following object is masked from ‘package:mvtnorm’:
+
+    dmvnorm
+
+> model <- Mclust(data)
+fitting ...
+  |                                                                                                                                                                                                           |   0%Error in mvnXII(data = data, prior = prior) : 
+  NA/NaN/Inf in foreign function call (arg 1)
+
+> clean_data <- na.omit(data)
+> model <- Mclust(clean_data)
+fitting ...
+  |===========================================================================================================================================================================================================| 100%
+>  model <- Mclust(data)
+fitting ...
+  |                                                                                                                                                                                                           |   0%Error in mvnXII(data = data, prior = prior) : 
+  NA/NaN/Inf in foreign function call (arg 1)
+
+> summary(model)
+---------------------------------------------------- 
+Gaussian finite mixture model fitted by EM algorithm 
+---------------------------------------------------- 
+
+Mclust XXX (ellipsoidal multivariate normal) model with 1 component: 
+
+ log-likelihood    n  df       BIC       ICL
+      -35060.06 1094 135 -71064.79 -71064.79
+
+Clustering table:
+   1 
+1094 
+> install.packages("fpc")
+also installing the dependencies ‘modeltools’, ‘DEoptimR’, ‘flexmix’, ‘prabclus’, ‘diptest’, ‘robustbase’, ‘kernlab’
+
+trying URL 'https://cloud.r-project.org/bin/macosx/big-sur-arm64/contrib/4.3/modeltools_0.2-23.tgz'
+Content type 'application/x-gzip' length 224960 bytes (219 KB)
+==================================================
+downloaded 219 KB
+
+trying URL 'https://cloud.r-project.org/bin/macosx/big-sur-arm64/contrib/4.3/DEoptimR_1.1-3.tgz'
+Content type 'application/x-gzip' length 72948 bytes (71 KB)
+==================================================
+downloaded 71 KB
+
+trying URL 'https://cloud.r-project.org/bin/macosx/big-sur-arm64/contrib/4.3/flexmix_2.3-19.tgz'
+Content type 'application/x-gzip' length 1724745 bytes (1.6 MB)
+==================================================
+downloaded 1.6 MB
+
+trying URL 'https://cloud.r-project.org/bin/macosx/big-sur-arm64/contrib/4.3/prabclus_2.3-3.tgz'
+Content type 'application/x-gzip' length 476679 bytes (465 KB)
+==================================================
+downloaded 465 KB
+
+trying URL 'https://cloud.r-project.org/bin/macosx/big-sur-arm64/contrib/4.3/diptest_0.77-1.tgz'
+Content type 'application/x-gzip' length 180834 bytes (176 KB)
+==================================================
+downloaded 176 KB
+
+trying URL 'https://cloud.r-project.org/bin/macosx/big-sur-arm64/contrib/4.3/robustbase_0.99-2.tgz'
+Content type 'application/x-gzip' length 3193268 bytes (3.0 MB)
+==================================================
+downloaded 3.0 MB
+
+trying URL 'https://cloud.r-project.org/bin/macosx/big-sur-arm64/contrib/4.3/kernlab_0.9-32.tgz'
+Content type 'application/x-gzip' length 2505377 bytes (2.4 MB)
+==================================================
+downloaded 2.4 MB
+
+trying URL 'https://cloud.r-project.org/bin/macosx/big-sur-arm64/contrib/4.3/fpc_2.2-11.tgz'
+Content type 'application/x-gzip' length 846901 bytes (827 KB)
+==================================================
+downloaded 827 KB
+
+
+The downloaded binary packages are in
+	/var/folders/jl/kzj9mlrx3fz83wmz4qsd35gm0000gn/T//Rtmp54KDsX/downloaded_packages
+> library(fpc)
+> dist_matrix <- dist(data)
+Warning message:
+In dist(data) : NAs introduced by coercion
+> str(data)
+'data.frame':	1102 obs. of  15 variables:
+ $ OBJECTID     : int  1 2 3 4 5 6 7 8 9 10 ...
+ $ ZIP.Code     : int  41 42 45 53 87 97 98 32003 32008 32008 ...
+ $ OBJECTID_1   : int  44 49 55 58 60 64 66 67 71 72 ...
+ $ DEPCODE      : int  6 5 42 50 31 44 44 10 15 21 ...
+ $ COUNTYNAME   : chr  "Broward" "Brevard" "Marion" "Palm Beach" ...
+ $ FieldMatch   : chr  "Broward-00041" "Brevard-00042" "Marion-00045" "Palm Beach-00053" ...
+ $ POName       : chr  "NONE" "NONE" "NONE" "NONE" ...
+ $ Places       : chr  "Area is in the South Florida Water Conservation Area 3A" "Area is part of a federally protected nature area" "Area is part of the Wakulla National Forest " "Area is part of the Loxahatchee National Wildlife Refuge" ...
+ $ OBJECTID_1.1 : int  NA NA NA NA NA NA NA 171 295 375 ...
+ $ ZIPX         : chr  "" "" "" "" ...
+ $ c_places     : chr  "" "" "" "" ...
+ $ Cases_1      : chr  "0" "0" "0" "0" ...
+ $ LabelY       : int  0 0 0 0 0 0 0 118 0 0 ...
+ $ Shape__Area  : num  0.1866 0.0412 0.0252 0.1656 0.0232 ...
+ $ Shape__Length: num  1.922 1.655 0.714 2.551 0.823 ...
+> numeric_data <- data[, sapply(data, is.numeric)]
+> dist_matrix <- dist(numeric_data)
+> cluster_stats <- cluster.stats(dist_matrix, model$classification)
+Error in sc$clus.avg.widths : $ operator is invalid for atomic vectors
+In addition: Warning message:
+In min(bv) : no non-missing arguments to min; returning Inf
+> str(model$classification)
+ num [1:1094] 1 1 1 1 1 1 1 1 1 1 ...
+> length(dist_matrix)
+[1] 606651
+> length(model$classification)
+[1] 1094
+> install.packages("cluster")
+trying URL 'https://cloud.r-project.org/bin/macosx/big-sur-arm64/contrib/4.3/cluster_2.1.6.tgz'
+Content type 'application/x-gzip' length 615060 bytes (600 KB)
+==================================================
+downloaded 600 KB
+
+
+The downloaded binary packages are in
+	/var/folders/jl/kzj9mlrx3fz83wmz4qsd35gm0000gn/T//Rtmp54KDsX/downloaded_packages
+> library(cluster)
+Error in value[[3L]](cond) : 
+  Package ‘cluster’ version 2.1.4 cannot be unloaded:
+ Error in unloadNamespace(package) : namespace ‘cluster’ is imported by ‘fpc’ so cannot be unloaded
+> diss_matrix <- diss(dist_matrix)
+Error in diss(dist_matrix) : could not find function "diss"
+> full_dist_matrix <- as.matrix(dist_matrix)
+> cluster_stats <- cluster.stats(full_dist_matrix, model$classification)
+Error in sc$clus.avg.widths : $ operator is invalid for atomic vectors
+In addition: Warning message:
+In min(bv) : no non-missing arguments to min; returning Inf
+> factor_classification <- as.factor(model$classification)
+> cluster_stats <- cluster.stats(full_dist_matrix, factor_classification)
+Error in Summary.factor(c(1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L,  : 
+  ‘max’ not meaningful for factors
+> train_predictions <- predict(svm_model, newdata = train_set)
+> confusion_matrix <- table(train_set$COUNTYNAME, train_predictions)
+> print(confusion_matrix)
+              train_predictions
+               Alachua Baker Bay Bradford Brevard Broward Calhoun Charlotte Citrus Clay Collier Columbia Dade Desoto Dixie Duval Escambia Flagler Franklin Gadsden Gilchrist Glades Gulf Hamilton Hardee Hendry
+  Alachua            0     0   0        0       0       0       0         0      0    0       0        0   14      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Baker              0     0   0        0       0       0       0         0      0    0       0        0    3      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Bay                0     0   0        0       0       0       0         0      0    0       0        0   11      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Bradford           0     0   0        0       0       0       0         0      0    0       0        0    3      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Brevard            0     0   0        0       0       0       0         0      0    0       0        0   19      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Broward            0     0   0        0       0       0       0         0      0    0       0        0   34      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Calhoun            0     0   0        0       0       0       0         0      0    0       0        0    3      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Charlotte          0     0   0        0       0       0       0         0      0    0       0        0    9      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Citrus             0     0   0        0       0       0       0         0      0    0       0        0   10      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Clay               0     0   0        0       0       0       0         0      0    0       0        0    8      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Collier            0     0   0        0       0       0       0         0      0    0       0        0    8      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Columbia           0     0   0        0       0       0       0         0      0    0       0        0    2      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Dade               0     0   0        0       0       0       0         0      0    0       0        0   61      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Desoto             0     0   0        0       0       0       0         0      0    0       0        0    2      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Dixie              0     0   0        0       0       0       0         0      0    0       0        0    2      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Duval              0     0   0        0       0       0       0         0      0    0       0        0   22      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Escambia           0     0   0        0       0       0       0         0      0    0       0        0   12      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Flagler            0     0   0        0       0       0       0         0      0    0       0        0    4      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Franklin           0     0   0        0       0       0       0         0      0    0       0        0    4      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Gadsden            0     0   0        0       0       0       0         0      0    0       0        0    3      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Gilchrist          0     0   0        0       0       0       0         0      0    0       0        0    5      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Glades             0     0   0        0       0       0       0         0      0    0       0        0    2      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Gulf               0     0   0        0       0       0       0         0      0    0       0        0    1      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Hamilton           0     0   0        0       0       0       0         0      0    0       0        0    2      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Hardee             0     0   0        0       0       0       0         0      0    0       0        0    3      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Hendry             0     0   0        0       0       0       0         0      0    0       0        0    2      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Hernando           0     0   0        0       0       0       0         0      0    0       0        0    5      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Highlands          0     0   0        0       0       0       0         0      0    0       0        0    6      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Hillsborough       0     0   0        0       0       0       0         0      0    0       0        0   39      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Holmes             0     0   0        0       0       0       0         0      0    0       0        0    2      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Indian River       0     0   0        0       0       0       0         0      0    0       0        0    3      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Jackson            0     0   0        0       0       0       0         0      0    0       0        0    8      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Jefferson          0     0   0        0       0       0       0         0      0    0       0        0    2      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Lafayette          0     0   0        0       0       0       0         0      0    0       0        0    2      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Lake               0     0   0        0       0       0       0         0      0    0       0        0   22      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Lee                0     0   0        0       0       0       0         0      0    0       0        0   33      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Leon               0     0   0        0       0       0       0         0      0    0       0        0   11      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Levy               0     0   0        0       0       0       0         0      0    0       0        0    5      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Liberty            0     0   0        0       0       0       0         0      0    0       0        0    2      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Madison            0     0   0        0       0       0       0         0      0    0       0        0    3      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Manatee            0     0   0        0       0       0       0         0      0    0       0        0   13      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Marion             0     0   0        0       0       0       0         0      0    0       0        0   15      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Martin             0     0   0        0       0       0       0         0      0    0       0        0    9      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Monroe             0     0   0        0       0       0       0         0      0    0       0        0    5      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Nassau             0     0   0        0       0       0       0         0      0    0       0        0    2      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Okaloosa           0     0   0        0       0       0       0         0      0    0       0        0    9      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Okeechobee         0     0   0        0       0       0       0         0      0    0       0        0    2      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Orange             0     0   0        0       0       0       0         0      0    0       0        0   33      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Osceola            0     0   0        0       0       0       0         0      0    0       0        0    8      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Palm Beach         0     0   0        0       0       0       0         0      0    0       0        0   36      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Pasco              0     0   0        0       0       0       0         0      0    0       0        0   17      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Pinellas           0     0   0        0       0       0       0         0      0    0       0        0   30      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Polk               0     0   0        0       0       0       0         0      0    0       0        0   26      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Putnam             0     0   0        0       0       0       0         0      0    0       0        0    6      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Santa Rosa         0     0   0        0       0       0       0         0      0    0       0        0    7      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Sarasota           0     0   0        0       0       0       0         0      0    0       0        0   21      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Seminole           0     0   0        0       0       0       0         0      0    0       0        0   11      0     0     0        0       0        0       0         0      0    0        0      0      0
+  St. Johns          0     0   0        0       0       0       0         0      0    0       0        0    8      0     0     0        0       0        0       0         0      0    0        0      0      0
+  St. Lucie          0     0   0        0       0       0       0         0      0    0       0        0   12      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Sumter             0     0   0        0       0       0       0         0      0    0       0        0    9      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Suwannee           0     0   0        0       0       0       0         0      0    0       0        0    6      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Taylor             0     0   0        0       0       0       0         0      0    0       0        0    4      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Union              0     0   0        0       0       0       0         0      0    0       0        0    3      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Volusia            0     0   0        0       0       0       0         0      0    0       0        0   20      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Wakulla            0     0   0        0       0       0       0         0      0    0       0        0    2      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Walton             0     0   0        0       0       0       0         0      0    0       0        0    6      0     0     0        0       0        0       0         0      0    0        0      0      0
+  Washington         0     0   0        0       0       0       0         0      0    0       0        0    4      0     0     0        0       0        0       0         0      0    0        0      0      0
+              train_predictions
+               Hernando Highlands Hillsborough Holmes Indian River Jackson Jefferson Lafayette Lake Lee Leon Levy Liberty Madison Manatee Marion Martin Monroe Nassau Okaloosa Okeechobee Orange Osceola Palm Beach
+  Alachua             0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Baker               0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Bay                 0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Bradford            0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Brevard             0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Broward             0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Calhoun             0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Charlotte           0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Citrus              0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Clay                0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Collier             0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Columbia            0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Dade                0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Desoto              0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Dixie               0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Duval               0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Escambia            0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Flagler             0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Franklin            0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Gadsden             0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Gilchrist           0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Glades              0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Gulf                0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Hamilton            0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Hardee              0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Hendry              0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Hernando            0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Highlands           0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Hillsborough        0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Holmes              0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Indian River        0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Jackson             0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Jefferson           0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Lafayette           0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Lake                0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Lee                 0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Leon                0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Levy                0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Liberty             0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Madison             0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Manatee             0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Marion              0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Martin              0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Monroe              0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Nassau              0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Okaloosa            0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Okeechobee          0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Orange              0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Osceola             0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Palm Beach          0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Pasco               0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Pinellas            0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Polk                0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Putnam              0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Santa Rosa          0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Sarasota            0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Seminole            0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  St. Johns           0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  St. Lucie           0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Sumter              0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Suwannee            0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Taylor              0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Union               0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Volusia             0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Wakulla             0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Walton              0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+  Washington          0         0            0      0            0       0         0         0    0   0    0    0       0       0       0      0      0      0      0        0          0      0       0          0
+              train_predictions
+               Pasco Pinellas Polk Putnam Santa Rosa Sarasota Seminole St. Johns St. Lucie Sumter Suwannee Taylor Union Volusia Wakulla Walton Washington
+  Alachua          0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Baker            0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Bay              0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Bradford         0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Brevard          0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Broward          0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Calhoun          0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Charlotte        0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Citrus           0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Clay             0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Collier          0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Columbia         0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Dade             0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Desoto           0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Dixie            0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Duval            0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Escambia         0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Flagler          0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Franklin         0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Gadsden          0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Gilchrist        0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Glades           0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Gulf             0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Hamilton         0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Hardee           0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Hendry           0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Hernando         0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Highlands        0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Hillsborough     0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Holmes           0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Indian River     0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Jackson          0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Jefferson        0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Lafayette        0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Lake             0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Lee              0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Leon             0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Levy             0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Liberty          0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Madison          0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Manatee          0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Marion           0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Martin           0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Monroe           0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Nassau           0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Okaloosa         0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Okeechobee       0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Orange           0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Osceola          0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Palm Beach       0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Pasco            0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Pinellas         0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Polk             0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Putnam           0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Santa Rosa       0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Sarasota         0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Seminole         0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  St. Johns        0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  St. Lucie        0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Sumter           0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Suwannee         0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Taylor           0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Union            0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Volusia          0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Wakulla          0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Walton           0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+  Washington       0        0    0      0          0        0        0         0         0      0        0      0     0       0       0      0          0
+> accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+> print(paste('Accuracy:', round(accuracy, 2)))
+[1] "Accuracy: 0.09"
+> 
